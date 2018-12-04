@@ -5,8 +5,10 @@ from geometry_msgs.msg import PoseStamped, Pose
 from styx_msgs.msg import TrafficLightArray, TrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
+from darknet_ros_msgs.msg import BoundingBoxes
 from cv_bridge import CvBridge
 from light_classification.tl_classifier import TLClassifier
+from light_classification.tl_classifierNN import TLClassifierNN
 import tf
 import cv2
 import math
@@ -46,7 +48,13 @@ class TLDetector(object):
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
         self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
+
+        if not self.config['is_site']:
+            self.light_classifier = TLClassifier()
+        else:
+            self.light_classifier = TLClassifierNN()
+            sub7 = rospy.Subscriber('/darknet_ros/bounding_boxes', BoundingBoxes, self.light_classifier.bboxes_cb)
+
         self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
@@ -148,9 +156,9 @@ class TLDetector(object):
 
         # Get classification
         result = self.light_classifier.get_classification(cv_image)
-        #rospy.loginfo("STATE: ")
-        #rospy.loginfo(light.state)
-        #rospy.loginfo(result)
+        rospy.loginfo("STATE: ")
+        # rospy.loginfo(light.state)
+        rospy.loginfo(result)
 
         return result
 
@@ -163,7 +171,7 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-
+        state = self.get_light_state(1)
         # Init closest waypoints for lights
         if not self.lights_wp_init:
             if self.lights and self.waypoints:
