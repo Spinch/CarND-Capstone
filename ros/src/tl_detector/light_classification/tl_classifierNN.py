@@ -1,5 +1,7 @@
 
 import rospy
+import cv2
+import numpy as np
 from styx_msgs.msg import TrafficLight
 from darknet_ros_msgs.msg import BoundingBoxes
 
